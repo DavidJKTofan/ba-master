@@ -1,2 +1,2 @@
 # ba-master
-Master Thesis of my Masters in Business Analytics (work in progress)
+Master Thesis of Masters in Business Analytics (work in progress)
