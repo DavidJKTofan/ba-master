@@ -6,6 +6,6 @@ Idealista API requested from https://www.idealista.com/labs/ which allowed us to
 
 # Data Cleaning & Transformation
 Data downloaded over time (API requests) as JSON files, then deleted duplicates (by propertyCode) and unified all records, and finally converted to DataFrame.
-<br>
+<br><br>
 Made sure that all datatypes are appropriate (e.g. size = number, district = character).
 
