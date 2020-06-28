@@ -11,7 +11,9 @@ Master Thesis of my Master in Business Analytics (work in progress)...
 
 - <b>Madrid_Postal_Codes.zip</b>: Postal Codes of Madrid Shapefile. Source: https://www.madrid.org/nomecalles/DescargaBDTCorte.icm. (<a href="http://www.madrid.org/iestadis/">Centro Regional de Información Cartográfica. Comunidad de Madrid</a>). Downloaded in June 2020.
 
+- <b>Salud_Farmacias.zip</b>: Pharmacies in Madrid Shapefile. Source: https://www.madrid.org/nomecalles/DescargaBDTCorte.icm. (<a href="http://www.madrid.org/iestadis/">Centro Regional de Información Cartográfica. Comunidad de Madrid</a>). Downloaded in June 2020.
+
 # Data Cleaning & Transformation
-Data downloaded over time (API requests) as JSON files, then deleted duplicates (by propertyCode) and unified all records, and finally converted to DataFrame.
+Data downloaded over time (API requests) as JSON files, then unified all records and deleted duplicates (by propertyCode), and finally converted to DataFrame.
 <br><br>
 Made sure that all datatypes are appropriate (e.g. size = number, district = character).
