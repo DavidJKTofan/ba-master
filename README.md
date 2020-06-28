@@ -15,6 +15,8 @@ For educational purposes only.
 
 - <b>Salud_Farmacias.zip</b>: Pharmacies in Madrid Shapefile. Source: https://www.madrid.org/nomecalles/DescargaBDTCorte.icm. (<a href="http://www.madrid.org/iestadis/">Centro Regional de Información Cartográfica. Comunidad de Madrid</a>). Downloaded in June 2020.
 
+- <b>Educacion_Centros.zip</b>: Public Education Centres in Madrid Shapefile. Source: https://www.madrid.org/nomecalles/DescargaBDTCorte.icm. (<a href="http://www.madrid.org/iestadis/">Centro Regional de Información Cartográfica. Comunidad de Madrid</a>). Downloaded in June 2020.
+
 # Data Cleaning & Transformation
 Data downloaded over time (API requests) as JSON files, then unified all records and deleted duplicates (by propertyCode), and finally converted to DataFrame.
 <br><br>
