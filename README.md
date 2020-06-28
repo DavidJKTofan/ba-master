@@ -1,5 +1,7 @@
 # Master Thesis
 Master Thesis of my Master in Business Analytics (work in progress)...
+<br><br>
+For educational purposes only.
 
 # Data Sources
 
