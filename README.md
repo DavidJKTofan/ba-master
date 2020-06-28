@@ -1,15 +1,15 @@
 # Master Thesis
 Master Thesis of my Master in Business Analytics (work in progress)...
 
-# Data Source
+# Data Sources
 
-- Idealista API: allowed us to get 50 property records per GET request, up to 100 requests per month. (<a href="https://www.idealista.com/labs/">Requested from Idealista Labs</a>). Requested in February 2020.
+- <b>Idealista API</b>: allowed us to get 50 property records per GET request, up to 100 requests per month. (<a href="https://www.idealista.com/labs/">Requested from Idealista Labs</a>). Requested in February 2020.
 
-- Datos_abiertos_Red_de_Metros.zip: Metro Madrid Shapefile. Source: https://data-crtm.opendata.arcgis.com/datasets/m4-accesos?geometry=-3.730%2C40.417%2C-3.669%2C40.429. (<a href="http://www.crtm.es/">Powered by CRTM</a>). Downladed in June 2020.
+- <b>ALL-JSON-FILES.csv</b>: all JSON data collected from the API, united into one single file.
 
-- ES.txt: GeoNames Postal Codes of Spain. Source: http://download.geonames.org/export/zip/. (<a href="http://www.geonames.org/">Creative Commons Attribution 3.0 License</a>). Downladed in June 2020.
+- <b>Datos_abiertos_Red_de_Metros.zip</b>: Metro Madrid Shapefile. Source: https://data-crtm.opendata.arcgis.com/datasets/m4-accesos?geometry=-3.730%2C40.417%2C-3.669%2C40.429. (<a href="http://www.crtm.es/">Powered by CRTM</a>). Downladed in June 2020.
 
-- 0_Codigo_Postal_2016.zip: 
+- <b>Madrid_Postal_Codes.zip</b>: Postal Codes of Madrid Shapefile. Source: https://www.madrid.org/nomecalles/DescargaBDTCorte.icm. (<a href="http://www.madrid.org/iestadis/">Centro Regional de Información Cartográfica. Comunidad de Madrid</a>). Downladed in June 2020.
 
 # Data Cleaning & Transformation
 Data downloaded over time (API requests) as JSON files, then deleted duplicates (by propertyCode) and unified all records, and finally converted to DataFrame.
