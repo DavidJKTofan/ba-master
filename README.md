@@ -21,3 +21,11 @@ For educational purposes only.
 Data downloaded over time (API requests) as JSON files, then unified all records and deleted duplicates (by propertyCode), and finally converted to DataFrame.
 <br><br>
 Made sure that all datatypes are appropriate (e.g. size = number, district = character).
+
+# Contributors
+
+- Andrés David DELGADO MOSQUERA
+
+- Iván Carlos BARRIO HERREROS
+
+- David Jo Konstantin TOFAN
