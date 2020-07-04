@@ -24,14 +24,17 @@ language <- "es"  # es, it, pt
 
 ## FOR LOOP parameters ##
 # Amount of loops
-x <- 10  # Search pages
+x <- 3  # Search pages
 # Time between loops
 sleeping <- 12  # Seconds
 
 for (i in 1:x) {
   ## START ##
-  y <- x * sleeping
-  print(paste("Wait for", y, "seconds in total..."))
+  # Total waiting time
+  if (i == 1){
+    y <- x * sleeping
+    print(paste("Wait for", y, "seconds in total..."))
+  }
   
   # Request
   req <- httr::POST("https://api.idealista.com/oauth/token",
