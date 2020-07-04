@@ -24,7 +24,7 @@ language <- "es"  # es, it, pt
 
 ## FOR LOOP parameters ##
 # Amount of loops
-x <- 3  # Search pages
+x <- 10  # Search pages
 # Time between loops
 sleeping <- 12  # Seconds
 
@@ -33,7 +33,7 @@ for (i in 1:x) {
   # Total waiting time
   if (i == 1){
     y <- x * sleeping
-    print(paste("Wait for", y, "seconds in total..."))
+    print(paste("Wait for", y, "seconds in total, for", x, "JSON files."))
   }
   
   # Request
@@ -81,8 +81,11 @@ for (i in 1:x) {
     # Wait
     Sys.sleep(sleeping)  # Seconds
   } else {
+    # Saved confirmation
+    print(paste("JSON File", i, "has been saved.", sep = " "))
     # Done
-    print("Done! All JSON files have been saved in your Working Directory.")
+    print("Done!")
+    print("All JSON files have been saved in your Working Directory.")
   }
   ## END ##
 }
