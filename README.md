@@ -1,7 +1,7 @@
 # Master Thesis
-Master Thesis of my Master in Business Analytics (work in progress)...
+Master Thesis of Master in Business Analytics (work in progress)...
 <br><br>
-For educational purposes only.
+DISCLAIMER: For educational purposes only.
 
 # Data Sources
 
