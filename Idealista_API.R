@@ -13,20 +13,21 @@ source("Idealista_Auth.R")  # Load variables from external file
 secret <- jsonlite::base64_enc(paste(consumer_key, consumer_secret, sep = ":"))
 
 ## Search URL parameters ##
-operation <- "sale"  # sale, rent
-order <- "publicationDate"  # priceDown
+operation <- "sale"           # sale, rent
+order <- "publicationDate"    # priceDown, publicationDate, modificationDate, size, distance
 center <- "40.4167,-3.70325"  # Madrid
-distance <- "3000"  # meters
-maxPrice <- "500000"  # euros
-propertyType <- "homes"  # homes, offices, premises, garages, bedrooms
-sorting <- "desc"  # asc
-language <- "es"  # es, it, pt
+distance <- "5000"            # meters from the center
+maxPrice <- "500000"          # Euros
+propertyType <- "homes"       # homes, offices, premises, garages, bedrooms
+typology <- "flat"            # flat, chalet, countryHouse, garage, premise, room, office
+sorting <- "desc"             # asc, desc
+language <- "es"              # es, it, pt
 
 ## FOR LOOP parameters ##
 # Amount of loops
 x <- 10  # Search pages
 # Time between loops
-sleeping <- 12  # Seconds
+sleeping <- 5  # Seconds
 
 for (i in 1:x) {
   ## START ##
@@ -36,7 +37,7 @@ for (i in 1:x) {
     print(paste("Wait for", y, "seconds in total, for", x, "JSON files."))
   }
   
-  # Request
+  # Request with authorization details
   req <- httr::POST("https://api.idealista.com/oauth/token",
                     httr::add_headers(
                       "Authorization" = paste("Basic", gsub("\n", "", secret)),
@@ -55,11 +56,12 @@ for (i in 1:x) {
                "&maxPrice=", maxPrice, 
                "&propertyType=", propertyType, 
                "&sort=", sorting, 
+               "&typology=", typology,
                "&numPage=",i,
                "&language=", language, 
                sep = "")
 
-  # Request
+  # Request with Token
   req <- httr::POST(url, httr::add_headers("Authorization" = token))
   
   # Timestamp
