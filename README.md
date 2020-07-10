@@ -30,8 +30,6 @@ Data sources which are especifically used for the Shiny Dashboard.
 
 - <b>final_model.rds</b>: Final statistical model.
 
-- <b>final_model.rds</b>: Final statistical model.
-
 - <b>leaflet_data.Rda</b>: DataFrame with all visual data for the interactive leaflet.
 
 - <b>cod_postal_analysis.Rda</b>: DataFrame of Madrid postal data with average property price per area.
