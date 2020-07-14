@@ -28,6 +28,8 @@ Data sources which are especifically used for the Shiny Dashboard.
 
 - <b>final_df.rds</b>: DataFrame of consolidated data.
 
+- <b>final_df_scaled.rds</b>: scaled/normalized DataFrame of consolidated data.
+
 - <b>final_model.rds</b>: Final statistical model.
 
 - <b>leaflet_data.Rda</b>: DataFrame with all visual data for the interactive leaflet.
