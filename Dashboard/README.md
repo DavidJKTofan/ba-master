@@ -10,3 +10,5 @@ shiny::runGitHub("ba-master", "DavidJKTofan", subdir = "Dashboard/")
 You can also access the dashboard on https://tototatutu.shinyapps.io/TFM_Dashboard/
 
 ![Dashboard Thumbnail](https://github.com/DavidJKTofan/ba-master/blob/master/Dashboard/TFM_Dashboard_Thumbnail.png?raw=true)
+
+<img src="https://github.com/DavidJKTofan/ba-master/blob/master/Dashboard/TFM_Dashboard_Thumbnail.png?raw=true" width="250">
