@@ -1,7 +1,19 @@
-# Master Thesis
-Master Thesis of Master in Business Analytics (work in progress)...
+# Final Project
+
+Master Thesis of our Masters in Business Analytics.
 <br><br>
-DISCLAIMER: For educational purposes only.
+Title in Spanish: Predicción del precio de la vivienda mediante el uso de métodos estadísticos espaciales.
+<br>
+Title in English: Prediction of house prices through the use of spatial statistical methods.
+<br>
+The focus of this project is the city of Madrid, Spain.
+<br>
+DISCLAIMER: educational purposes only.
+
+# Abstract
+
+The housing market offers great opportunities to those who know how to take advantage of them. In this document we propose a spatial statistical study of the price of housing aimed both at obtaining an accurate prediction and at ensuring that said prediction is based on a solid and stable statistical model throughout the space; guaranteeing acceptable results even when trying to predict based on the data of a new house, totally unrelated to those used in the modeling phase.
+Thanks to these techniques, we intend to offer a different point of view, basing our study on the influence that the price of a house suffers due to the value of its neighboring homes, and thus proposing a new framework of work and research little explored compared to other more traditional statistical models used for this topic.
 
 # Data Sources
 
@@ -43,3 +55,4 @@ Data sources which are especifically used for the Shiny Dashboard.
 - Iván Carlos BARRIO HERREROS
 
 - David Jo Konstantin TOFAN
+
