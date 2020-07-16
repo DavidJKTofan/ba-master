@@ -1,12 +1,10 @@
 # Final Project
 
-Master Thesis of our Masters in Business Analytics.
+Master Thesis of our Masters in Business Analytics. The focus of this project is the city of Madrid, Spain.
 <br><br>
 Title in Spanish: Predicción del precio de la vivienda mediante el uso de métodos estadísticos espaciales.
 <br><br>
 Title in English: Prediction of house prices through the use of spatial statistical methods.
-<br><br>
-The focus of this project is the city of Madrid, Spain.
 <br><br>
 DISCLAIMER: educational purposes only.
 
