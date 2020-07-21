@@ -40,14 +40,22 @@ shinyServer(function(input, output, session) {
     output$status_output <- renderText({
         paste("<b>","Status: ","</b>", input$status_input)
     })
+    # FLOOR OUTPUT
+    output$floor_output <- renderText({
+        paste("<b>","Floor: ","</b>", input$floor_input)
+    })
+    # DISTRICT OUTPUT
+    output$district_output <- renderText({
+        paste("<b>","District: ","</b>", input$district_input)
+    })
     # POSTAL CODE OUTPUT
     output$postal_code_output <- renderText({
         paste("<b>","Postal Code: ","</b>", input$postal_code_input)
     })
-    # OSM OUTPUT
-    output$osm_output <- renderText({
-        paste("<b>","OSM: ","</b>", input$osm_input)
-    })
+    # # OSM OUTPUT
+    # output$osm_output <- renderText({
+    #     paste("<b>","OSM: ","</b>", input$osm_input)
+    # })
     
     # --------------------- #
     
@@ -161,14 +169,14 @@ shinyServer(function(input, output, session) {
             {
                 # valueBox
                 valueBox(tags$p("Media de población en el area", style = "font-size: 60%;"),
-                         subtitle = tags$p(paste0("€ ", formatC(as.numeric(final_df_COD_POSTAL_value), format="f", digits=0, big.mark=".", decimal.mark = ",")), style = "font-size: 150%;"),
+                         subtitle = tags$p(paste0(formatC(as.numeric(final_df_COD_POSTAL_value), format="f", digits=0, big.mark=".", decimal.mark = ",")), style = "font-size: 150%;"),
                          #subtitle = tags$p(final_df_COD_POSTAL_value, style = "font-size: 150%;"),
                          icon = icon("user-friends"),
                          color = "green")
             } else {
                 # valueBox
                 valueBox(tags$p("Media de población en el area", style = "font-size: 60%;"),
-                         subtitle = tags$p(paste0("€ ", formatC(as.numeric(final_df_COD_POSTAL_value), format="f", digits=0, big.mark=".", decimal.mark = ",")), style = "font-size: 150%;"),
+                         subtitle = tags$p(paste0(formatC(as.numeric(final_df_COD_POSTAL_value), format="f", digits=0, big.mark=".", decimal.mark = ",")), style = "font-size: 150%;"),
                          #subtitle = tags$p(final_df_COD_POSTAL_value, style = "font-size: 150%;"),
                          icon = icon("user-friends"),
                          color = "yellow")
