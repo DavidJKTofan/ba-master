@@ -1,8 +1,10 @@
 # Preview
 
+Click the image below to watch our dissertation defense (in Spanish):
+
 <a href="https://youtu.be/5tzwNCBOoT8" target="_blank"><img src="https://github.com/DavidJKTofan/ba-master/blob/master/Dashboard/YouTube%20Thumbnail.png?raw=true" width="600" alt="YouTube Thumbnail"></a>
 
-# Load dashboard
+~~# Load dashboard~~
 
 ~~You can start the Dashboard by introducing the following code into your RStudio:~~
 
