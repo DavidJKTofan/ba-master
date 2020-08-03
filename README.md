@@ -6,7 +6,7 @@ Title in Spanish: Predicción del precio de la vivienda mediante el uso de méto
 <br><br>
 Title in English: Prediction of house prices through the use of spatial statistical methods.
 <br><br>
-DISCLAIMER: educational purposes only.
+DISCLAIMER: educational purposes only. Some data files were excluded from the repository in order to respect certain privacy laws.
 
 # Abstract
 
