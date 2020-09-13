@@ -1,0 +1,2036 @@
+---
+title: "Grupo TFM Idealista V10 SIN NORMALIZAR"
+author: "Andrés Delgado"
+date: "7/11/2020"
+output: html_document
+---
+
+
+# Carga de Librerias 
+
+```{r}
+library(RCurl)            # READING     : Trabajar con Horas
+library(geosphere)            # SPATIAL     : Calcular distancia KM
+library(ProbitSpatial)        # SPATIAL     : Probit Spacial de Martinetti
+library(foreign)              # READING     : Leer DBFs Files
+library(sp)                   # SPATIAL     : Merge Points and Polygons Over
+library(rgdal)                # READING     : Leer ShapeFiles
+library(dplyr)                # FILTROS     : SQL en R
+library(maptools)             # READING     : Leer ShapeFiles
+library(ggmap)                # SPATIAL     : Visualizar Spatial Data
+library(tmap)                 # SPATIAL     : Visualizar y crear Mapas
+library(spdep)                # SPATIAL     : Create Neighbourhoods y Diferentes Test Spaciales
+library(spatialEco)           # SPATIAL     : Manipulacion Spacial
+library(rgeos)                # SPATIAL     : Calcular Centroides
+library(ggplot2)              # PLOT        : Graficos espacializados
+library(mgcv)                 # REGRESION   : GAM Modelos GAM
+library(rsatscan)             # SPATIAL     : Software SatScan Clustering Spacial
+library(SpatialEpi)           # SPATIAL     : Clustering Spacial 
+library(ResourceSelection)    # REGRESION   : Test de Lemmerson -Holmes
+library(pROC)                 # REGRESION   : Calculo de ROC
+library(McSpatial)            # SPATIAL     : Probit Spacial McMillen
+library(car)                  # REGRESION   : Companion to Applied Regression
+library(spatialprobit)        # SPATIAL     : Spatial Probit LeSage
+library(Matrix)               # READING     : Hacer Matrices Sparce
+library(splines)              # REGRESION   : Hacer Splines
+library(earth)                # REGRESION   : Metodolog?a MARSplines
+library(stats)                # REGRESION   : Autoregresive Regression Models
+library(party)                # REGRESION   : Metodolog?a ?rboles de Decisi?n
+library(ROCR)                 # REGRESION   : Calculo ROC para ?rboles
+library(leaflet)              # SPATIAL     : Interactive Maps
+library(shiny)                # SPATIAL     : Create interative Interface
+library(leaflet.extras)       # SPATIAL     : Interactive Maps new version   
+library(RColorBrewer)         # READING     : Palette de Colores
+library(smerc)                # SPATIAL     : Spatial Clustering
+library(vcd)                  # REGRESION   : Calculate V Crammer 
+library(rvest)
+library(shinyjs)              #
+library(shinyWidgets) 
+library(raster)
+library(gbm)
+library(MortalityTables)
+library(RSelenium)
+library(AMOEBA)
+library(maptools)
+library(plotrix)
+library(data.table)
+library(spgwr)
+
+library(openxlsx)
+library(data.table)
+library(rgdal)
+library(shinydashboard)
+library(formattable)
+library(DT)
+library(data.table)
+library(osmdata)
+library(httr)
+```
+
+
+```{r}
+#SatScann Spacial
+#Agrega una base de datos en funci?n de 3 variables
+aggreg<-function(df,variable1,variable2,variable3,text="median"){
+  
+  df$variable1<-variable1  
+  df$variable2<-variable2    
+  df$variable3<-variable3  
+  
+  c1<-as.data.frame(table(df$variable1))
+  c2<-as.data.frame(table(df$variable2))
+  
+  mm<-as.data.frame(matrix(0,nrow=nrow(c1),ncol=nrow(c2)*2))
+  colnames(mm)<-c(as.character(c2$Var1),paste("Cta.",as.character(c2$Var1),sep=""))
+  rownames(mm)<-c(as.character(c1$Var1))
+  
+  dfdf<-paste(text)
+  
+  for (f in 1:nrow(mm)){
+    for (c in 1:(ncol(mm)/2)){
+      
+      xx<-filter(df,variable1==rownames(mm)[f],variable2==colnames(mm)[c])
+      
+      if (nrow(xx)==0){  xx1<-rbind(xx,c(rep(0,ncol(xx)))) }
+      if (nrow(xx)>0){   xx1<-xx                           }
+      
+      colnames(xx1)<-colnames(xx) 
+      
+      if (nrow(xx)==0){ mm[f,c]<-nrow(xx1)-1 }  
+      if (nrow(xx)>0){ mm[f,c]<-nrow(xx1) }  
+      
+      mm[f,c+((ncol(mm)/2))]<-floor(aggregate(cbind(variable3)~1,data = xx1,FUN = dfdf))
+      
+      }}
+  
+  mm<-as.data.frame(mm)
+  total<-apply(mm,1,sum )
+  
+  nueva<-mm[,1:(ncol(mm)/2)]
+  colnames(nueva)<-c(paste("P",as.character(c2$Var1),sep=""))
+  
+  suma<-apply(nueva,1,sum)
+  
+  suma<-nrow(df)
+  
+  for (i in 1:ncol(nueva)){
+    
+    nueva[,i]<-round(mm[,i]/suma,2)
+    
+    
+  }
+  
+  mm<-cbind(Name=rownames(mm),mm)
+  
+  mm<-cbind(mm,nueva)
+  
+  #mm<-dplyr::filter(mm,total>0)
+  
+  return(mm)
+  
+}
+
+#Pinta Distribuciones en funci?n de dos variables
+gplt<-function(df,variable3,variable4,w=-100000000,e=1000000000){
+  
+  df$variable3<-variable3
+  df$variable4<-variable4
+  
+  df<-filter(df,variable3>=w,variable3<=e)
+  
+  tt<-ggplot(df, aes(variable3)) +
+    geom_density(aes(fill = as.factor(variable4)), alpha = .4, adjust = 2)
+  
+  
+  tt <- ggplotly(tt)
+  
+  return(tt)
+}
+
+#Agrega base de datos en funci?n de dos variables
+sprd<- function(df,variable3,variable4){
+  
+  df$variable3<-variable3
+  df$variable4<-variable4
+  
+  aggregate(variable3 ~ variable4, data = df, FUN = function(x) c(mn = quantile(x) ) )
+  
+  
+}
+
+#Pinta a Nivel Punto una base de datos y Variable COlor y Tama?o
+pl_pt<-function(df,size2,color2,dd=5,sz=2000,volterars=0,volterarc=0){
+  
+  if (!is.numeric(size2)) {  df$size<-as.numeric(as.factor(size2)) }
+  if (!is.numeric(color2)) { df$color<-as.numeric(as.factor(color2))}
+  if (is.numeric(size2)) {  df$size<-(size2) }
+  if (is.numeric(color2)) { df$color<-(color2)}
+  x<-dd 
+  dd<-seq(0,1,1/dd)
+  
+  if (volterars==1){      df$size<-(max(df$size)+1-df$size)    }
+  if (volterarc==1){      df$color<-(max(df$color)+1-df$color)    } 
+  
+  
+  if (length(unique(df$color))<10){    pal <- colorBin(palette = "RdYlBu", domain = df$color ,bins = length(levels(as.factor(df$color))) , na.color = "grey40", reverse = T) }
+  if (length(unique(df$color))>=10){   pal <- colorBin(palette = "RdYlBu", domain = df$color ,bins = unique(quantile(df$color, dd )), na.color = "grey40", reverse = T) }
+  
+  a<-as.character(cut(as.numeric(as.factor(df$size)),breaks=x))
+  a<-as.numeric(as.factor(a))
+  
+  
+  print(table(size2,a))
+  print(table(color2,pal(df$color)))
+  
+  
+  
+  
+  pintar<-leaflet() %>%
+    addTiles() %>%
+    addLegend(pal = pal, values = round(df$color, 1), position = "bottomright", title = "") %>%
+    addCircles(data=df,lng =df$LONG_IND ,lat =df$LAT_IND , stroke = FALSE, opacity = 5,fillOpacity = 5,
+               color =pal(df$color),radius=a*sz,
+               label = ~as.character(paste(get("NOMBRE"),get("CANAL"),get("size2"),get("color2"), sep=" / ")))
+  
+  
+  
+  
+  return(pintar)
+  
+  
+  
+}
+
+#Pintar Geo o Pintar Raster o a Nivel Punto
+pintar_Pl_raster<-function(GEO=0,pt,punto_raster=0,perc=4,rr=15,size2=0,color2=0,sz=2000,volterars=0,volterarc=0){
+  
+  
+  if (punto_raster==0){
+    
+    pintar<-pl_pt(df = pt,size2 =size2,color2 =color2,dd =perc,sz =sz,volterars =volterars,volterarc=volterarc   )
+    
+    
+  }
+  
+  
+  if (punto_raster==1){
+    
+    pt<-dplyr::select(pt,response, LONG_IND,LAT_IND,VIVO)
+    
+    if (!is.numeric(pt$response)) {  pt$response<-as.numeric(as.factor(pt$response)) }
+    if (is.numeric(pt$response)) {  pt$response<-(pt$response) }
+    
+    pt_sp<-pt
+    coordinates(pt_sp)<- c("LONG_IND","LAT_IND")
+    proj4string(pt_sp) <- proj4string(GEO)
+    
+    dd<-seq(0,1,1/perc)
+    
+    GEO@data$response <- over(x = GEO, y = pt_sp,fn = mean)$response
+    GEO@data$VIVOS <- over(x = GEO, y = pt_sp,fn = sum)$VIVO
+    GEO<-GEO[!is.na(GEO$response),]
+    
+    pal <- colorBin("RdYlBu", domain = GEO@data[, "response"],bins = unique(quantile(GEO@data[, "response"], dd )),na.color = "grey40", reverse = T)
+    
+    
+    pintar<-leaflet() %>%
+      addTiles() %>%
+      addLegend(pal = pal, 
+                values = round(GEO@data[, "response"], 1), 
+                position = "bottomright", title = "") %>%
+      addPolygons(data=GEO, weight = 1,opacity = 5.0 ,fillOpacity = 3,
+                  fill = GEO@data[, "response"], 
+                  fillColor = pal(GEO@data[, "response"]),
+                  label = ~as.character(paste(get("response"), sep=" / "))  )
+    
+  }
+  
+  
+  if (punto_raster==2){
+    
+    pt<-dplyr::select(pt,response, LONG_IND,LAT_IND,VIVO)
+    
+    if (!is.numeric(pt$response)) {  pt$response<-as.numeric(as.factor(pt$response)) }
+    if (is.numeric(pt$response)) {  pt$response<-(pt$response) }
+    
+    
+    pt_sp<-pt
+    coordinates(pt_sp)<- c("LONG_IND","LAT_IND")
+    proj4string(pt_sp) <- proj4string(GEO)
+    
+    dd<-seq(0,1,1/perc)
+    
+    raster <- raster(ncol = rr, nrow = rr)
+    extent(raster) <- extent(pt_sp)
+    values(raster)<-c(1:(rr*rr))
+    
+    Geo_R<-rasterToPolygons(raster)
+    ID<-(1:nrow(Geo_R@data))
+    Geo_R@data<-cbind(ID,Geo_R@data)
+    
+    
+    Geo_R@data$response <- over(x = Geo_R, y = pt_sp,fn = mean)$response
+    Geo_R@data$VIVOS <- over(x = Geo_R, y = pt_sp,fn = sum)$VIVO
+    Geo_R<-Geo_R[!is.na(Geo_R$response),]
+    
+    pal <- colorBin("RdYlBu", domain = Geo_R@data[, "response"],bins = unique(quantile(Geo_R@data[, "response"], dd )),na.color = "grey40", reverse = T)
+    
+    
+    pintar<-leaflet() %>%
+      addTiles() %>%
+      addLegend(pal = pal, 
+                values = round(Geo_R@data[, "response"], 1), 
+                position = "bottomright", title = "") %>%
+      addPolygons(data=Geo_R, weight = 1,opacity = 5.0 ,fillOpacity = 3,
+                  fill = Geo_R@data[, "response"], 
+                  fillColor = pal(Geo_R@data[, "response"]),
+                  label = ~as.character(paste(get("response"),get("VIVOS"), sep=" / "))  )
+    
+    
+    
+  }
+  
+  return(pintar)
+  
+}
+
+#Agreg
+agreg<-function(GEO=0,pt,rr=15,punto_raster=0){
+  print(1)
+  if (punto_raster==0){
+    
+    xx<-dplyr::select(pt,response,LONG_IND,LAT_IND)
+    if (!is.numeric(pt$response)) {  xx$response<-as.numeric(as.factor(xx$response)) }
+    if (is.numeric(pt$response)) {  xx$response<-(xx$response) }
+    
+    xx$VIVOS<-1
+    GEO@data<-xx
+    ID<-c(1:nrow(GEO@data))
+    GEO@data<-cbind(ID,GEO@data)
+    GEO@data$VIVOS<-1
+    
+  }
+  
+  if (punto_raster==1){
+    
+    pt<-dplyr::select(pt,response, LONG_IND,LAT_IND)
+    
+    if (!is.numeric(pt$response)) {  pt$response<-as.numeric(as.factor(pt$response)) }
+    if (is.numeric(pt$response)) {  pt$response<-(pt$response) }
+    
+    pt_sp<-pt
+    coordinates(pt_sp)<- c("LONG_IND","LAT_IND")
+    proj4string(pt_sp) <- proj4string(GEO)
+    
+    GEO@data$response <- over(x = GEO, y = pt_sp,fn = mean)$response
+    GEO<-GEO[!is.na(GEO$response),]
+    
+    LAT_IND<-centroid(GEO)[,2]
+    LONG_IND<-centroid(GEO)[,1]
+    response<-GEO@data$response
+    xx<-as.data.frame(cbind(response,LONG_IND,LAT_IND))
+    xx$VIVOS<-1
+    
+    ID<-c(1:nrow(GEO))
+    GEO@data<-cbind(ID,GEO@data)
+    GEO@data$VIVOS<-1
+    GEO@data$LAT_IND<-LAT_IND
+    GEO@data$LONG_IND<-LONG_IND
+    
+  }
+  
+  if (punto_raster==2){
+    
+    
+    pt<-dplyr::select(pt,response, LONG_IND,LAT_IND)
+    
+    if (!is.numeric(pt$response)) {  pt$response<-as.numeric(as.factor(pt$response)) }
+    if (is.numeric(pt$response)) {  pt$response<-(pt$response) }
+    
+    print(2)
+    pt_sp<-pt
+    coordinates(pt_sp)<- c("LONG_IND","LAT_IND")
+    proj4string(pt_sp) <- proj4string(GEO)
+    
+    raster <- raster(ncol = rr, nrow = rr)
+    extent(raster) <- extent(pt_sp)
+    values(raster)<-c(1:(rr*rr))
+    
+    Geo_R<-rasterToPolygons(raster)
+    ID2<-(1:nrow(Geo_R@data))
+    Geo_R@data<-cbind(ID2,Geo_R@data)
+    print(3)
+    
+    Geo_R@data$response <- over(x = Geo_R, y = pt_sp,fn = mean)$response
+    Geo_R<-Geo_R[!is.na(Geo_R$response),]
+    
+    GEO<-Geo_R
+    
+    LAT_IND<-centroid(GEO)[,2]
+    LONG_IND<-centroid(GEO)[,1]
+    response<-GEO@data$response
+    xx<-as.data.frame(cbind(response,LONG_IND,LAT_IND))
+    xx$VIVOS<-1
+    
+    ID<-c(1:nrow(GEO))
+    GEO@data<-cbind(ID,GEO@data)
+    GEO@data$VIVOS<-1
+    GEO@data$LAT_IND<-LAT_IND
+    GEO@data$LONG_IND<-LONG_IND
+    
+  }
+  
+  
+  sd<-list(GEO,xx)
+  
+  return(sd)
+  
+}
+
+#Dependencia Espacial.
+dep_Espacial<-function(GEO=0,xx,punto_raster=0,nn=5){
+  
+  #Global
+  knn <- knearneigh(cbind(xx$LONG_IND,xx$LAT_IND), k=nn)
+  
+  plt<-moran.plot(x = xx$response, listw = nb2listw(knn2nb(knn)), zero.policy = TRUE, main="Gr?fico I Moran")
+  tst<-moran.test(x = xx$response, listw = nb2listw(knn2nb(knn)), zero.policy = TRUE)
+  
+  #Local
+  imoranlocal<-as.data.frame(localmoran(x = xx$response, listw = nb2listw(knn2nb(knn)), zero.policy = TRUE))
+  
+  if (punto_raster>=1){
+  GEO@data<-cbind(GEO@data,imoranlocal)
+  pal <- colorBin("RdYlBu", domain = GEO@data[, "Z.Ii"],bins = unique(quantile(GEO@data[, "Z.Ii"], seq(0,1,1/8) )),na.color = "grey40", reverse = T)
+  pintar<-leaflet() %>%
+                    addTiles() %>%
+                    addLegend(pal = pal,values = round(GEO@data[, "Z.Ii"], 1), position = "bottomright", title = "") %>%
+                    addPolygons(data=GEO, weight = 1,opacity = 5.0 ,fillOpacity = 3,
+                     fill = GEO@data[, "Z.Ii"], fillColor = pal(GEO@data[, "Z.Ii"]),
+                     label = ~as.character(paste(get("Z.Ii"), sep=" / "))  )
+  
+  
+  }
+  if (punto_raster==0){
+    print(sapply(xx,class))
+    xx<-cbind(xx,imoranlocal)
+    
+    pal <- colorBin("RdYlBu", domain = xx[, "Z.Ii"],bins = unique(quantile(xx[, "Z.Ii"], seq(0,1,1/8) )),na.color = "grey40", reverse = T)
+    pintar<-leaflet() %>%
+      addTiles() %>%
+      addLegend(pal = pal,values = round(xx[, "Z.Ii"], 1), position = "bottomright", title = "") %>%
+      addCircles(data=xx,lng = xx$LONG_IND,lat =xx$LAT_IND , stroke = FALSE,radius=4000,opacity=5,fillOpacity = 5,
+                  fill = xx[, "Z.Ii"], fillColor = pal(xx[, "Z.Ii"]),
+                  label = ~as.character(paste(get("Z.Ii"), sep=" / "))  )
+  }
+  
+  
+  
+  sss<-list(tst,pintar)
+  
+  return(sss)
+  
+}
+
+#Devuelve una Matrix de Vecinos
+mat_vec<-function(GEO,n=5){
+  
+  LAT_IND<-centroid(GEO)[,2]
+  LONG_IND<-centroid(GEO)[,1]
+  response<-GEO@data$response
+  
+  B1<-as.data.frame(cbind(response,LONG_IND,LAT_IND))
+  
+  
+  ru<-runif(nrow(B1))/100000
+  co<-cbind((B1$LONG_IND)+ru,B1$LAT_IND)
+  
+  Dist<-knearneigh(co, k=n, longlat=TRUE)
+  Dist1<-knn2nb(Dist)
+  Dist2<-nb2mat(Dist1)
+  
+  
+  return(Dist2)
+  
+}
+
+#SatScann Spacial
+SatScanp<-function(GEO,rates=1,shape=0,MT=5,AT=1,reps=99){
+  
+  setwd("C:/Users/Miguel/Desktop/PC/4_Proyectos/1_Super_App")
+  #save(ssenv, file = "MyEnv.RData")
+  #rm(ssenv)
+  ssenv <- load("MyEnv.RData")
+  load("MyEnv.RData")
+  
+  td = tempdir()
+  
+  ###Obtengo los centroides de mi polygondataframe
+  
+  centroides<-as.data.frame(cbind(GEO$LONG_IND,GEO$LAT_IND))
+  centroides<-latlong2grid(centroides)
+  
+  ###Construyo los inputs para SATSCAN
+  NHumbersidecas1<-as.data.frame(matrix(0,nrow =nrow(GEO) ,ncol=3))
+  NHumbersidectl1<-as.data.frame(matrix(0,nrow =nrow(GEO) ,ncol=2))
+  NHumbersidegeo1<-as.data.frame(matrix(0,nrow =nrow(GEO) ,ncol=3))
+  NHumbersidepop1<-as.data.frame(matrix(0,nrow =nrow(GEO) ,ncol=2))
+  
+  ###Identificaci?n del ID y de la respuesta
+  NHumbersidecas1$locationid<-GEO[,1]
+  NHumbersidecas1$numcases<- GEO$VIVOS
+  NHumbersidecas1$values<- GEO$response
+  
+  NHumbersidectl1$locationid<-GEO[,1]
+  NHumbersidectl1$numcontrols<-GEO$VIVOS
+  
+  NHumbersidepop1$locationid<-GEO[,1]
+  NHumbersidepop1$numpopulation<-GEO$VIVOS
+  
+  NHumbersidegeo1$locationid<-GEO[,1]
+  NHumbersidegeo1$x<-coordinate<-centroides$x
+  NHumbersidegeo1$y<-coordinate<-centroides$y
+  
+  if (MT %in% c(3,4,5,7)) {  NHumbersidecas<-dplyr::select(NHumbersidecas1,-V1,-V2,-V3)   }
+  
+  if (MT %in% c(0,1)) {  NHumbersidecas1$numcases<-NHumbersidecas1$values
+                       NHumbersidecas<-dplyr::select(NHumbersidecas1,-V1,-V2,-V3,-values)  }
+  
+  # 0vc=Poisson, 1v=Bernoulli, 3=Ordinal, 4v=Exponential, 5v=Normal, 7=Multinomial
+  
+  NHumbersidepop<-dplyr::select(NHumbersidepop1,-V1,-V2)
+  NHumbersidectl<-dplyr::select(NHumbersidectl1,-V1,-V2)
+  NHumbersidegeo<-dplyr::select(NHumbersidegeo1,-V1,-V2,-V3)
+  
+  ###Genero archivos temporales
+  write.cas(NHumbersidecas, td, "NHumberside")
+  write.ctl(NHumbersidectl, td, "NHumberside")
+  write.geo(NHumbersidegeo, td, "NHumberside")
+  write.pop(NHumbersidepop, td, "NHumberside")
+  
+  write.csv(NHumbersidecas,"NHumbersidecas.csv")
+  write.csv(NHumbersidegeo,"NHumbersidegeo.csv")
+  
+  if (MT %in% c(4,5)){
+  ###Opciones SatScan
+    print(1)
+  invisible(ss.options(reset=TRUE))
+  ss.options(list(CaseFile="NHumberside.cas", 
+                  AnalysisType=AT,#(1=Purely Spatial, 2=Purely Temporal, 3=Retrospective Space-Time, 4=Prospective Space-Time, 5=Spatial Variation in Temporal Trends, 6=Prospective Purely Temporal)"
+                  #ControlFile="NHumberside.ctl",
+                  #PopulationFile="NHumberside.pop",
+                  CoordinatesFile="NHumberside.geo",
+                  StartDate="2001/11/1", 
+                  EndDate="2001/11/24",
+                  ScanAreas=rates, #scan areas (1=High Rates(Poison,Bernoulli,STP); High Values(Ordinal,Normal); Short Survival(Exponential), 2=Low Rates(Poison,Bernoulli,STP);
+                  PrecisionCaseTimes=0, #time precision (0=None, 1=Year, 2=Month, 3=Day, 4=Generic)
+                  CoordinatesType=0, #coordinate type (0=Cartesian, 1=latitude/longitude)
+                  ModelType=MT, #(0=Discrete Poisson, 1=Bernoulli, 2=Space-Time Permutation, 3=Ordinal, 4=Exponential, 5=Normal, 6=Continuous Poisson, 7=Multinomial)"
+                  TimeAggregationUnits = 0, #time aggregation units (0=None, 1=Year, 2=Month, 3=Day, 4=Generic
+                  MaxSpatialSizeInPopulationAtRisk=50,
+                  SpatialWindowShapeType=shape , #window shape (0=Circular, 1=Elliptic)
+                  NonCompactnessPenalty=0,
+                  MonteCarloReps=reps,
+                  IterativeScanMaxPValue=0.1,
+                  ReportGiniClusters="y", 
+                  LogRunToHistoryFile="n"
+                  
+  ))
+  }
+  
+  
+  if (MT %in% c(3,7)){
+    ###Opciones SatScan
+    print(1)
+    invisible(ss.options(reset=TRUE))
+    ss.options(list(CaseFile="NHumberside.cas", 
+                    AnalysisType=AT,#(1=Purely Spatial, 2=Purely Temporal, 3=Retrospective Space-Time, 4=Prospective Space-Time, 5=Spatial Variation in Temporal Trends, 6=Prospective Purely Temporal)"
+                    #ControlFile="NHumberside.ctl",
+                    #PopulationFile="NHumberside.pop",
+                    CoordinatesFile="NHumberside.geo",
+                    StartDate="2001/11/1", 
+                    EndDate="2001/11/24",
+                    ScanAreas=rates, #scan areas (1=High Rates(Poison,Bernoulli,STP); High Values(Ordinal,Normal); Short Survival(Exponential), 2=Low Rates(Poison,Bernoulli,STP);
+                    PrecisionCaseTimes=0, #time precision (0=None, 1=Year, 2=Month, 3=Day, 4=Generic)
+                    CoordinatesType=0, #coordinate type (0=Cartesian, 1=latitude/longitude)
+                    ModelType=MT, #(0=Discrete Poisson, 1=Bernoulli, 2=Space-Time Permutation, 3=Ordinal, 4=Exponential, 5=Normal, 6=Continuous Poisson, 7=Multinomial)"
+                    TimeAggregationUnits = 0, #time aggregation units (0=None, 1=Year, 2=Month, 3=Day, 4=Generic
+                    MaxSpatialSizeInPopulationAtRisk=50,
+                    SpatialWindowShapeType=shape , #window shape (0=Circular, 1=Elliptic)
+                    NonCompactnessPenalty=0,
+                    MonteCarloReps=reps,
+                    IterativeScanMaxPValue=0.1,
+                    ReportGiniClusters="n", 
+                    LogRunToHistoryFile="n"
+                    
+    ))
+  }
+  
+  
+ 
+  if (MT %in% c(1)){
+    ###Opciones SatScan
+    print(2)
+    invisible(ss.options(reset=TRUE))
+    ss.options(list(CaseFile="NHumberside.cas", 
+                    AnalysisType=AT,#(1=Purely Spatial, 2=Purely Temporal, 3=Retrospective Space-Time, 4=Prospective Space-Time, 5=Spatial Variation in Temporal Trends, 6=Prospective Purely Temporal)"
+                    ControlFile="NHumberside.ctl",
+                    #PopulationFile="NHumberside.pop",
+                    CoordinatesFile="NHumberside.geo",
+                    StartDate="2001/11/1", 
+                    EndDate="2001/11/24",
+                    ScanAreas=rates, #scan areas (1=High Rates(Poison,Bernoulli,STP); High Values(Ordinal,Normal); Short Survival(Exponential), 2=Low Rates(Poison,Bernoulli,STP);
+                    PrecisionCaseTimes=0, #time precision (0=None, 1=Year, 2=Month, 3=Day, 4=Generic)
+                    CoordinatesType=0, #coordinate type (0=Cartesian, 1=latitude/longitude)
+                    ModelType=MT, #(0=Discrete Poisson, 1=Bernoulli, 2=Space-Time Permutation, 3=Ordinal, 4=Exponential, 5=Normal, 6=Continuous Poisson, 7=Multinomial)"
+                    TimeAggregationUnits = 0, #time aggregation units (0=None, 1=Year, 2=Month, 3=Day, 4=Generic
+                    MaxSpatialSizeInPopulationAtRisk=50,
+                    SpatialWindowShapeType=shape , #window shape (0=Circular, 1=Elliptic)
+                    NonCompactnessPenalty=0,
+                    MonteCarloReps=reps,
+                    IterativeScanMaxPValue=0.1,
+                    ReportGiniClusters="y", 
+                    LogRunToHistoryFile="n"
+    ))
+  }
+  
+  if (MT %in% c(0)){
+    ###Opciones SatScan
+    print(3)
+    invisible(ss.options(reset=TRUE))
+    ss.options(list(CaseFile="NHumberside.cas", 
+                    AnalysisType=AT,#(1=Purely Spatial, 2=Purely Temporal, 3=Retrospective Space-Time, 4=Prospective Space-Time, 5=Spatial Variation in Temporal Trends, 6=Prospective Purely Temporal)"
+                    #ControlFile="NHumberside.ctl",
+                    PopulationFile="NHumberside.pop",
+                    CoordinatesFile="NHumberside.geo",
+                    StartDate="2001/11/1", 
+                    EndDate="2001/11/24",
+                    ScanAreas=rates, #scan areas (1=High Rates(Poison,Bernoulli,STP); High Values(Ordinal,Normal); Short Survival(Exponential), 2=Low Rates(Poison,Bernoulli,STP);
+                    PrecisionCaseTimes=0, #time precision (0=None, 1=Year, 2=Month, 3=Day, 4=Generic)
+                    CoordinatesType=0, #coordinate type (0=Cartesian, 1=latitude/longitude)
+                    ModelType=MT, #(0=Discrete Poisson, 1=Bernoulli, 2=Space-Time Permutation, 3=Ordinal, 4=Exponential, 5=Normal, 6=Continuous Poisson, 7=Multinomial)"
+                    TimeAggregationUnits = 0, #time aggregation units (0=None, 1=Year, 2=Month, 3=Day, 4=Generic
+                    MaxSpatialSizeInPopulationAtRisk=50,
+                    SpatialWindowShapeType=shape , #window shape (0=Circular, 1=Elliptic)
+                    NonCompactnessPenalty=0,
+                    MonteCarloReps=reps,
+                    IterativeScanMaxPValue=0.1,
+                    ReportGiniClusters="y", 
+                    LogRunToHistoryFile="n"
+    ))
+  }
+  
+  print(head(NHumbersidecas))
+  print(head(NHumbersidegeo))
+  
+  write.ss.prm(td, "NHumberside")
+  
+  NHumberside <- satscan(td, "NHumberside",sslocation = "C:/Program Files (x86)/SaTScan",verbose  =TRUE)
+  
+  if (!is.na(NHumberside$gis)) {
+    vec<-as.vector(as.numeric(as.character(NHumberside$gis$LOC_ID)))
+    NHumberside$GRE3<-vec
+  }
+  if (is.na(NHumberside$gis)){
+    NHumberside$GRE3<-0
+  }
+  
+  return(NHumberside)
+  
+}
+
+#Pintar SatScann Spacial
+print_sk<-function(xx,sk,pv=0.20){
+  
+  clusters<-sk$gis
+  clusters<-dplyr::filter(clusters,P_VALUE<=pv)
+  
+  xx0<-dplyr::filter(xx,!(ID %in% clusters$LOC_ID))
+  xx1<-dplyr::filter(xx,ID %in% clusters$LOC_ID)
+  
+  xx0$rows<-nrow(xx0)
+  xx1$rows<-nrow(xx1)
+  
+  xx0$av_res<-round(mean(xx0$response),3)
+  xx1$av_res<-round(mean(xx1$response) ,3) 
+  
+  pintar<-leaflet() %>%
+    addTiles() %>%
+    addCircles(data=xx0,lng = xx0$LONG_IND,lat = xx0$LAT_IND,radius = 200,color = "grey", label=~(paste("Average",xx0$av_res,"Rows",xx0$rows))) %>%
+    addCircles(data=xx1,lng = xx1$LONG_IND,lat = xx1$LAT_IND,radius = 1000,color = "red", label=~(paste("Average",xx1$av_res,"Rows",xx1$rows)))
+
+  return(pintar)
+
+}
+
+#Modelo Interpolacion
+gwr__m<-function(GEO,bw,mod=1){
+  
+  xx<-GEO
+  coordinates(xx)<- c("LONG_IND","LAT_IND")
+  proj4string(xx) <- c("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
+  
+  #Obtenemos el mejor BW
+  #bw <- gwr.sel(response ~ 1,weights=VIVOS, data=xx)
+  
+  #Modelizamos
+  if (mod==1){  g <- gwr(response ~ 1,weights=VIVOS, data=xx, bandwidth=bw)  }
+  if (mod==2){ g <- ggwr(CONSUMO ~ EDAD+YEARS_CIA, data=puntos_sp, bandwidth=bw,family=poisson()) }
+  
+  
+  if (mod==1){ g$SDF$"(Intercept)"<-g$SDF$"(Intercept)"}
+  if (mod==2){ g$SDF$"(Intercept)"<-g$SDF$X.Intercept.}
+  
+  xx@data$adicional<-g$SDF$"(Intercept)"
+  
+  
+  df<-list(g,xx)
+  
+  return(df)
+}
+
+#Pintar Modelo Interpolacion
+plot_gwr<-function(GEO,ggg,dd=5){
+  
+  GEO$Intercept_Gwr<-ggg[[1]]$SDF$`(Intercept)`
+  
+  dd<-seq(0,1,1/dd)
+  
+  pal <- colorBin("RdYlBu", domain = GEO[, "Intercept_Gwr"],bins = unique(quantile(GEO[, "Intercept_Gwr"], dd )),na.color = "grey40", reverse = T)
+  
+  
+  pintar<-leaflet() %>%
+    addTiles() %>%
+    addLegend(pal = pal, 
+              values = round(GEO[, "Intercept_Gwr"], 1), 
+              position = "bottomright", title = "") %>%
+    addCircles(data=GEO,lng =GEO$LONG_IND,lat=GEO$LAT_IND , radius=700,
+                color = pal(GEO[, "Intercept_Gwr"]),
+                label = ~as.character(paste(get("Intercept_Gwr"), sep=" / "))  )
+  
+  return(pintar)
+  
+  
+  
+  
+  
+  
+  
+  
+}
+
+#Calculo de Percentiles
+perc.rank <- function(x) trunc(rank(x))/length(x)
+```
+
+# Carga de Data
+
+```{r}
+# Ruta donde trabajaremos:
+main_path <- "/Users/davidtofan/Desktop/Education/Business Analytics/TFM/MODELOS/TFM_FINAL_MODEL"
+```
+
+```{r cars}
+## Download data ##
+x <- getURL('https://raw.githubusercontent.com/DavidJKTofan/ba-master/master/Data/ALL-JSON-FILES.csv')
+data <- read.csv(text = x)
+
+# View data types
+sapply(data, class)
+```
+
+```{r }
+# Cargamos el dataset:
+DATASET_TEMPORAL_1 <- read.xlsx("DATASET TEMPORAL 1.xlsx", 1)
+
+
+# Convert Data Type
+DATASET_TEMPORAL_1[,3:12] <- sapply(DATASET_TEMPORAL_1[,3:12], as.numeric )
+DATASET_TEMPORAL_1[,1] <- sapply(DATASET_TEMPORAL_1[,1], as.numeric )
+
+# Cargamos el dataset:
+datos_externos <- as.data.frame(DATASET_TEMPORAL_1)
+```
+
+```{r}
+# ShapeFile URL
+#url <- 'https://github.com/DavidJKTofan/ba-master/blob/master/0_Codigo_Postal_2016.zip?raw=true'
+# create a temporary directory
+#td <- tempdir()
+# create the placeholder file
+#tf <- tempfile(tmpdir=td, fileext=".zip")
+# download into the placeholder file
+#download.file(url, tf)
+# unzip the file to the temporary directory
+#unzip(tf, exdir=td, overwrite=TRUE)
+# fpath is the full path to the extracted file
+#fpath = file.path(td)
+
+# Load Postal / ZIP codes
+
+postal_code <- readOGR(dsn = '0_Codigo_Postal_2016',layer = '0_Codigo_Postal_2016')
+
+# CRS
+postal_code <- spTransform(postal_code, CRS('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'))
+
+Geo_CP <-readOGR(dsn="2019_CP_Spain")
+Geo_CP@data$C5<-(as.numeric(as.character(Geo_CP@data$CP)))
+Geo_CP   <- spTransform(Geo_CP, CRS("+proj=longlat +datum=WGS84"))
+#Centroides<-as.data.frame(gCentroid(Geo_CP, byid=TRUE)@coords)
+Centroides<-as.data.frame(gPointOnSurface(Geo_CP, byid = T)@coords)  
+Geo_CP@data<-cbind(Geo_CP@data,Centroides)
+Geo_CP@data$ID1<-c(1:nrow(Geo_CP@data))
+
+# DataFrame Copy
+postal_code_df <- as.data.frame(postal_code)
+```
+
+
+#####################Análisis de Variables Intrínsecas##############
+# Análisis de Variables Intrínsecas
+
+## Preparing Data
+
+### Filter Data
+```{r}
+# Save original filtered data
+original_data <- data
+```
+
+
+```{r}
+# Filter Data
+data <- data %>%
+  filter(data$price <= 500000,  # Only properties with less than 500k price  #hist(data$price)
+         data$size < 500,  # m2
+         data$propertyType == 'flat', # Only property type Flat
+         data$municipality == 'Madrid')  # Only properties with less than 20k size  #hist(data$size)
+```
+
+
+
+
+## BarChart Distributions of Categorical Variables
+
+```{r}
+# Check factor variables
+# Select categorical column
+factor <- data.frame(select_if(original_data, is.factor))
+ncol(factor) # number of categorical columns
+```
+
+
+
+
+
+```{r}
+# Create graphs (BarCharts) for each column
+#graph <- lapply(names(factor),
+                #function(x) 
+                  #ggplot(factor, aes(get(x))) +
+                  #geom_bar() +
+                  #theme(axis.text.x = element_text(angle = 90)))
+# Print the graphs
+#graph
+```
+
+
+
+```{r}
+# Set PropertyCode as Index
+rownames(data) <- data$propertyCode
+```
+
+### Drop Columns
+
+```{r}
+# Drop unnecessary columns
+drops <- c('X',
+           'propertyCode', # Index
+           'numPhotos',
+           'address',
+           'showAddress',
+           'municipality', # All Mdrid
+           'url',
+           #'neighborhood',
+           'hasVideo',
+           'hasPlan',
+           'has3DTour',
+           'has360',
+           'priceByArea',
+           'newDevelopmentFinished',
+           'newDevelopment',
+           'parkingSpace.isParkingSpaceIncludedInPrice',
+           'parkingSpace.parkingSpacePrice',
+           'topNewDevelopment')
+data <- data[ , !(names(data) %in% drops)]
+```
+
+```{r}
+# Convert Lat and Long in Characters (to not interfere with the models yet)
+data$latitude <- as.character(data$latitude)
+data$longitude <- as.character(data$longitude)
+```
+
+```{r}
+# Sort/arrange in descending order
+#data <- arrange(data, desc(price))  # gets rid of PropertyCode Index
+
+head(data)
+```
+
+
+```{r}
+# Preview data
+glimpse(data)
+
+# View Data Structure
+str(data)
+```
+
+
+```{r}
+# Plot the distribution: Histogram
+ggplot(data, aes(x = price)) +
+  geom_density(alpha = .2, fill = '#FF6666')
+```
+
+
+
+### QQPlot, observamos que Price parece seguir una distribución gaussiana, por lo que podremos aplicar esta familia al GLM sin temor a que los residuos se vean afectados.
+
+
+```{r}
+
+qqPlot(data$price)
+
+```
+
+
+
+```{r}
+# Compute the value of the 99 percent of the variable
+top_one_percent <- quantile(data$price, .99)
+top_one_percent
+# 98% of the properties have less than 29955 in respective variable
+```
+
+```{r}
+# Drop the observations above this threshold
+data_drop <- data %>%
+  filter(distance < top_one_percent)
+dim(data_drop)
+```
+
+```{r}
+data_rescale <- data.frame(data)
+```
+
+```{r}
+# Check factor variables
+# Select categorical column
+factor <- data.frame(select_if(data_rescale, is.factor))
+ncol(factor) # number of categorical columns
+```
+
+### Eliminación Outliers 
+
+```{r}
+a <- which(data_rescale$price%in% boxplot(data_rescale$price, main = "Precio")$out)
+b <- which(data_rescale$`size`%in% boxplot(data_rescale$`size`,main = "Size")$out)
+c <- which(data_rescale$distance %in% boxplot(data_rescale$distance, main = "Distancia")$out)
+
+vector <- c(a,b,c)
+duplicated(vector)
+vec_dup <-vector[duplicated(vector)]
+str(vec_dup)
+vec_sin_dup <-vector[!duplicated(vector)]
+head(vec_sin_dup)
+data_rescale1 <- data_rescale[-vec_sin_dup, ]
+
+```
+
+
+
+
+
+
+
+
+
+### Feature Engineering 
+
+```{r}
+# Recast/reorder floor variables
+recast_data <- data_rescale1 %>%
+  mutate(floor = factor(ifelse(floor == '-1' | 
+                                     floor == 'bj' | 
+                                     floor == 'en' | 
+                                     floor == 'ss' | 
+                                     floor == 'st', 
+                               # OTRO
+                               'otro', 
+                                   ifelse(floor == '1', 
+                                          # PRIMERA
+                                          'primera', 
+                                          ifelse(floor == '2' | 
+                                                   floor == '3' | 
+                                                   floor == '4' |
+                                                   floor == '5', 
+                                                 # MITAD
+                                                 'mitad',
+                                                 # ALTO
+                                                 'alto')))))  # floor groups
+```
+
+```{r}
+# Recast/reorder status variables
+recast_data <- recast_data %>%
+  mutate(status = factor(ifelse(status == 'good', 
+                               # 1
+                               '1', 
+                                   ifelse(status == 'renew', 
+                                          # 2
+                                          '2', 
+                                          ifelse(status == 'newdevelopment', 
+                                                 # 3
+                                                 '3',
+                                                 # 4
+                                                 '4')))))  # status groups
+```
+
+```{r}
+which(is.na(recast_data$status))
+```
+
+```{r}
+recast_data$hasLift <- ifelse(recast_data$hasLift==1, 'True', 'False')
+```
+
+
+## Visual Distributions
+
+### 'propertyType'
+```{r}
+# Check percentage of floor group with 'propertyType'
+ggplot(recast_data, aes(x = propertyType, fill = floor)) +
+  geom_bar(position = 'fill') +
+  theme_classic()
+```
+
+
+```{r}
+# Check percentage of floor group with 'propertyType'
+ggplot(recast_data, aes(x = rooms, fill = status)) +
+  geom_bar(position = 'fill') +
+  theme_classic()
+
+```
+
+
+```{r}
+# Check percentage of floor group with 'status'
+ggplot(recast_data, aes(x = district, fill = status)) +
+  geom_bar(position = 'fill') +
+  theme_classic()
+```
+
+
+### hasLift'
+```{r}
+# Check percentage of floor group with 'status'
+ggplot(recast_data, aes(x = hasLift, fill = floor)) +
+  geom_bar(position = 'fill') +
+  theme_classic()
+```
+
+```{r}
+# Check percentage of floor group with 'hasLift'
+ggplot(recast_data, aes(x = hasLift, fill = status)) +
+  geom_bar(position = 'fill') +
+  theme_classic()
+```
+
+
+### 'parkingSpace.hasParkingSpace'
+```{r}
+# Check percentage of floor group with 'parkingSpace.hasParkingSpace'
+ggplot(recast_data, aes(x = floor, fill = parkingSpace.hasParkingSpace)) +
+  geom_bar(position = 'fill') +
+  theme_classic()
+```
+
+### 'Size'
+```{r}
+# Price by floor group: Box Plot
+ggplot(recast_data, aes(x = district, y = size)) +
+  geom_boxplot() +
+  stat_summary(fun = mean,
+               geom = 'point',
+               size = 3,
+               color = 'steelblue') +
+  theme_classic()
+```
+
+
+### Price by Floor group
+```{r}
+# Price by floor group: Box Plot
+ggplot(recast_data, aes(x = floor, y = price)) +
+  geom_boxplot() +
+  stat_summary(fun = mean,
+               geom = 'point',
+               size = 3,
+               color = 'steelblue') +
+  theme_classic()
+```
+
+
+
+
+### Distance
+```{r}
+# Price by floor group: Box Plot
+ggplot(recast_data, aes(x = district, y = distance)) +
+  geom_boxplot() +
+  stat_summary(fun = mean,
+               geom = 'point',
+               size = 3,
+               color = 'steelblue') +
+  theme_classic()
+```
+
+
+### Density plot
+```{r}
+# Plot distribution price by propertyType: Density Plot
+ggplot(recast_data, aes(x = price)) +
+  geom_density(aes(color = propertyType), alpha = 0.5) +
+  theme_classic()
+```
+
+```{r}
+# Plot distribution price by propertyType: Density Plot
+ggplot(recast_data, aes(x = size)) +
+  geom_density(aes(color = propertyType), alpha = 0.5) +
+  theme_classic()
+```
+
+
+
+### Price related to size
+
+```{r}
+# Non-linearity: check if the price is related to size
+ggplot(recast_data, aes(x = size, y = price)) +
+  geom_point(aes(color = floor),
+             size = 0.5) +
+  stat_smooth(method = 'lm',
+              formula = y~poly(x, 2),
+              se = TRUE,
+              aes(color = floor)) +
+  theme_classic()
+```
+
+```{r}
+# Non-linearity: check if the price is related to size
+ggplot(recast_data, aes(x = size, y = price)) +
+  geom_point(aes(color = rooms),
+             size = 0.5) +
+  stat_smooth(method = 'lm',
+              formula = y~poly(x, 2),
+              se = TRUE,
+              aes(color = rooms)) +
+  theme_classic()
+```
+
+
+
+```{r}
+which(is.na(recast_data$status))
+```
+
+### Correlation
+
+
+```{r}
+# Convertimos la variables objetivo a 1/0 en vez de Yes/No:
+#recast_data$exterior <- ifelse(recast_data$exterior=="TRUE", 1, 0)
+#recast_data$newDevelopment <- ifelse(recast_data$newDevelopment=="TRUE", 1, 0)
+recast_data$parkingSpace.hasParkingSpace <- ifelse(recast_data$parkingSpace.hasParkingSpace=="TRUE", 1, 0)
+#recast_data$floor <- ifelse(recast_data$floor=="alto", 1, 0)
+recast_data$hasLift <- ifelse(recast_data$hasLift=="True", 1, 0)
+```
+
+```{r}
+recast_data$status <- as.numeric(recast_data$status)
+recast_data$rooms  <- as.numeric(recast_data$rooms )
+recast_data$bathrooms  <- as.numeric(recast_data$bathrooms )
+recast_data$distance   <- as.numeric(recast_data$distance  )
+recast_data$price    <- as.numeric(recast_data$price   )
+recast_data$hasLift    <- as.numeric(recast_data$hasLift   )
+recast_data$exterior    <- as.numeric(recast_data$exterior   )
+
+```
+
+
+```{r}
+library(ggcorrplot)
+# OTHER CORRELATION METHOD (only numeric variables)
+correlations <- cor(recast_data[,c('price',
+                            'size', 
+                            'exterior',
+                            'rooms', 
+                            'bathrooms', 
+                            'distance',
+                            'status',
+                            #'newDevelopment',
+                           
+                            'hasLift')], 
+                    use = 'complete.obs')
+# Visualize correlation
+ggcorrplot(correlations,  title = 'Correlación', method = 'square')
+```
+
+#####################Análisis de Variables Extrínsecas##############
+
+# Análisis de Variables Extrínsecas
+
+##Limpieza de Variables
+
+```{r}
+# Identificamos cada tipologia de variables:
+class_vars <- sapply(datos_externos, class)
+class_vars
+```
+
+
+```{r}
+# Seleccionamos las variables de tipo character:
+char_vars <- names(datos_externos)[class_vars=="character"]
+# Eliminamos el id de cliente y el target:
+#char_vars <- char_vars[!char_vars%in%c("state", "phone number")]
+# Seleccionamos las variables de tipo numeric:
+num_vars <- names(datos_externos)[class_vars=="numeric"]
+# Seleccionamos las variables de tipo integer:
+int_vars <- names(datos_externos)[class_vars=="integer"]
+```
+
+
+```{r}
+# # Variables enteras a numericas:
+datos_externos[int_vars,] <- sapply(datos_externos[int_vars,], as.numeric)
+
+#  Anadimos a nuestras variables numericas las que acabamos de transformar:
+num_vars <- c(num_vars, int_vars, char_vars)
+```
+
+
+```{r}
+sum(is.na(datos_externos))
+```
+
+###Outliers
+
+```{r}
+a <- which(datos_externos$`precio`%in% boxplot(datos_externos$`precio`, main = "Precio del M2")$out)
+b <- which(datos_externos$`ventas`%in% boxplot(datos_externos$`ventas`,main = "Ventas")$out)
+c <- which(datos_externos$pib %in% boxplot(datos_externos$pib, main = "PIB")$out)
+d <- which(datos_externos$varpib %in% boxplot(datos_externos$varpib, main = "Variación del PIB")$out)
+e <- which(datos_externos$pibpercapita %in% boxplot(datos_externos$pibpercapita, main = "PIB per Cápita")$out)
+f <- which(datos_externos$varpibpercapita %in% boxplot(datos_externos$varpibpercapita)$out)
+g <- which(datos_externos$poblacionnacionales %in% boxplot(datos_externos$poblacionnacionales, main = "Población Nacionales")$out)
+h <- which(datos_externos$poblacionextranjeros %in% boxplot(datos_externos$poblacionextranjeros, main = "Población Extranjeros")$out)
+i <- which(datos_externos$desempleohombres %in% boxplot(datos_externos$desempleohombres, main = "Desempleo Hombres")$out)
+j <- which(datos_externos$desempleomujeres %in% boxplot(datos_externos$desempleomujeres, main = "Desempleo Mujeres")$out)
+k <- which(datos_externos$tasadedesempleo %in% boxplot(datos_externos$tasadedesempleo, main = "Tasa de Desempleo")$out)
+l <- which(datos_externos$promtasaintereshipotecas %in% boxplot(datos_externos$promtasaintereshipotecas, main = "Tasas de Interés")$out)
+m <- which(datos_externos$hipotecas %in% boxplot(datos_externos$hipotecas, main = "Hipotécas")$out)
+n <- which(datos_externos$salariominimo %in% boxplot(datos_externos$salariominimo, main = "Salario Mínimo")$out)
+```
+
+```{r}
+vector <- c(a,b,c,d,e,f,g,h,i,j,k,l,m,n)
+duplicated(vector)
+vec_dup <-vector[duplicated(vector)]
+str(vec_dup)
+vec_sin_dup <-vector[!duplicated(vector)]
+head(vec_sin_dup)
+Data1 <- datos_externos[vec_dup, ]
+Data2 <- datos_externos[-vec_sin_dup, ]
+```
+
+
+```{r}
+Data3 <- filter(datos_externos, año == '2019') 
+```
+
+
+```{r}
+drops2 <- c('precio area',
+           'pibpercapita', 
+           'tasadedesempleo',
+           'varpib'
+           )
+Data4 <- Data3[ , !(names(Data3) %in% drops2)]
+```
+
+
+#####################Selección de Variables##############
+
+# Selección de Variables
+
+```{r}
+datosfinal <- merge(recast_data, Data4, by=c('district'))
+```
+
+```{r}
+drops3 <- c('precio area',
+           'pib', 
+           'promtasaintereshipotecas',
+           'parkingSpace.hasParkingSpace',
+           'propertyType',
+           'salariominimo',
+           'exterior',
+           'año',
+           'varpibpercapita',
+           #'price',
+           #'distance',
+           "poblacionnacionales",
+            "desempleohombres",
+           'hipotecas'
+           )
+datosfinal1 <- datosfinal[ , !(names(datosfinal) %in% drops3)]
+```
+
+
+```{r}
+correlationsfinal1 <- cor(datosfinal1[,c("price",
+                                       "ventas",
+                                       #"pib",
+                                       #"poblacionnacionales",
+                                       "poblacionextranjeros",
+                                       #"desempleohombres",
+                                       "desempleomujeres",
+                                       #"promtasaintereshipotecas",
+                                       #"hipotecas",
+                                       #"salariominimo",
+                                       #'precio area',
+                                       'size', 
+                                       #'exterior',
+                                       'rooms',
+                                       'bathrooms',
+                                       'distance',
+                                        'status',
+                                        #'newDevelopment',
+                                       #'parkingSpace.hasParkingSpace',
+                                        #'floor',
+                                       'hasLift')], use = "complete.obs")
+ggcorrplot(correlationsfinal1,  title = "Correlación", method = "square")
+```
+
+```{r}
+#Multicolinealidad
+vif(glm(price ~  distance + size + rooms + bathrooms + status  + hasLift +  ventas  + poblacionextranjeros + desempleomujeres + floor, data = datosfinal1))
+```
+
+
+
+```{r}
+# FINAL DATAFRAME !!
+datos <- datosfinal1
+final_data <- datos
+# Convert to Spatial DataFrame
+final_data$latitude <- as.numeric(final_data$latitude)
+final_data$longitude <- as.numeric(final_data$longitude)
+final_data_SP <- final_data
+# Create Coordinates
+coordinates(final_data_SP) <- c('longitude', 'latitude')
+class(final_data_SP)
+
+# Asign Coordinate Reference System (CRS) and transform to Spatial DataFrame
+proj4string(final_data_SP) <- CRS('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
+# CRS
+postal_code <- spTransform(postal_code, CRS('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'))
+
+# New Column COD_POSTAL
+final_data_SP$COD_POSTAL <- over(final_data_SP, postal_code)$COD_POSTAL
+
+head(final_data_SP@data)
+```
+
+```{r}
+# Exctract Property Longitude and Latitude (locations)
+final_data_LongLat <- final_data[,c("longitude","latitude")]  # Property Locations
+# Preview
+head(final_data_LongLat)
+```
+
+## OSM Locations
+
+```{r}
+## OPENSTREETMAP ##
+# Download the buildings/locations (extracting Longitude and Latitude)
+# City Map
+mapa1 <- opq(bbox = 'Madrid, Spain')
+# Specific Buildings
+Poligonos_inside <- add_osm_feature(mapa1, 
+                                    key = 'building',  
+                    # Other options: https://wiki.openstreetmap.org/wiki/Category:Keys
+                                    value = 'hospital')  
+                    # Other options: https://wiki.openstreetmap.org/wiki/Talk:Key:building
+
+# View all key options for add_osm_feature
+#available_features()
+# View all value options for a specific key option
+#available_tags('building')
+#?add_osm_feature # Help function
+# More info: https://dominicroye.github.io/en/2018/accessing-openstreetmap-data-with-r/
+
+# Formatting to Spatial
+df <- osmdata_sp(Poligonos_inside)
+
+# Centroides of each Polygon + Representation
+spChFIDs(df$osm_polygons) <- 1:nrow(df$osm_polygons@data)
+
+# Represent the points
+centroides <- gCentroid(df$osm_polygons, byid = TRUE) 
+
+# Illustrate maps
+leaflet(centroides, options = leafletOptions(minZoom = 10, maxZoom = 18)) %>% 
+  addTiles() %>%
+  setMaxBounds(lng1 = -3.903, lat1 = 40.216, lng2 = -3.303, lat2 = 40.816 ) %>%
+  addCircles()
+
+# Create a Buffer around the buildings; less than 200 meters
+buffer <- gBuffer(centroides, byid = TRUE, width = 0.002)
+
+# Convert to Spatial Polygon DataFrame
+leaflet(centroides, options = leafletOptions(minZoom = 10, maxZoom = 18)) %>% 
+  addTiles() %>% 
+  addPolygons(data=buffer,col='red') %>%
+  setMaxBounds(lng1 = -3.903, lat1 = 40.216, lng2 = -3.303, lat2 = 40.816 ) %>%
+  addCircles()
+
+# Combine the Polygons where the Buffer touches
+buffer <- SpatialPolygonsDataFrame(buffer,data.frame(row.names=names(buffer),n= 1:length(buffer))) 
+
+gt <- gIntersects(buffer, byid = TRUE, returnDense = FALSE)
+
+ut <- unique(gt); nth <- 1:length(ut); buffer$n <- 1:nrow(buffer); buffer$nth <- NA
+
+for(i in 1:length(ut)){
+  x <- ut[[i]]; buffer$nth[x] <- i}
+
+buffdis <- gUnaryUnion(buffer, buffer$nth)
+
+# Convert to Spatial Polygon DataFrame
+# Combine the Polygons where the Buffer touches again
+leaflet(centroides, options = leafletOptions(minZoom = 10, maxZoom = 18)) %>% 
+  addTiles() %>% 
+  addPolygons(data = buffdis, col = 'red') %>% 
+  addCircles()
+
+gt <- gIntersects(buffdis, byid = TRUE, returnDense = FALSE)
+
+ut <- unique(gt); nth <- 1:length(ut)
+
+buffdis <- SpatialPolygonsDataFrame(buffdis, data.frame(row.names = names(buffdis), n = 1:length(buffdis)))
+
+buffdis$nth <- NA
+
+for(i in 1:length(ut)){
+  x <- ut[[i]]; buffdis$nth[x] <- i}
+
+buffdis <- gUnaryUnion(buffdis, buffdis$nth)
+
+leaflet(centroides, options = leafletOptions(minZoom = 10, maxZoom = 18)) %>% 
+  addTiles() %>% 
+  addPolygons(data = buffdis, col = 'red') %>% 
+  setMaxBounds(lng1 = -3.903, lat1 = 40.216, lng2 = -3.303, lat2 = 40.816 ) %>%
+  addCircles()
+```
+
+```{r}
+# Exctracting Longitude and Latitude
+# x = longitude
+# y = latitude
+# CRS = +proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0
+#centroides@coords
+# Change Coordinate Reference System (CRS) to same as others
+#centroides <- spTransform(centroides, CRS('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'))
+
+# Convert to DataFrame
+centroides_LongLat <- as.data.frame(centroides)
+# Preview
+head(centroides_LongLat)
+```
+
+## Calculate Distance
+
+- Find closest **OSM buildings** as indicated before.
+
+```{r}
+## FIND CLOSEST OSM BUILDING ##
+# Number of buildings/locations found on OpenStreetMap
+nrow(centroides_LongLat)
+cat("Building searched on OSM:", Poligonos_inside$features[1])
+
+# Add new columns
+final_data_LongLat$distancia_km_hospital <- NA
+final_data_LongLat$x <- NA
+final_data_LongLat$y <- NA
+
+### START FOR LOOP ###
+for(i in 1:nrow(final_data_LongLat)) {
+  # Distance
+  Dist <- distm(centroides_LongLat,  # ALL buildings from OpenStreetMap
+                final_data_LongLat[i,1:2],  # One Property
+                fun = distCosine) / 1000  # 'Law Of Cosines' Great Circle Distance
+  # Output = kilometers (km)
+  Dist <- apply(Dist,  # variable
+                1,  # 1 = Row / 2 = Columns
+                min)  # function
+  # Find closest places/locations to Property
+  min_number <- which.min(Dist) # which(Dist == min(Dist))
+  min_number_value <- centroides_LongLat[min_number,]
+  # Add values to DataFrame (unite)
+  final_data_LongLat[i,4] <- min_number_value[1,1]
+  final_data_LongLat[i,5] <- min_number_value[1,2]
+  final_data_LongLat$distancia_km_hospital[i] <- min(Dist)
+}
+### END FOR LOOP ###
+# Preview
+head(final_data_LongLat)
+```
+
+```{r}
+# ADD DISTANCIA_KM TO FINAL_DATA
+# New column name from OSM search
+x <- c(Poligonos_inside$features[1])
+# Remove unnecessary string characters
+x <- gsub(' [/"', "", x, fixed = TRUE)
+x <- gsub('/"=/"', "_", x, fixed = TRUE)
+x <- gsub('/"]', "", x, fixed = TRUE)
+x <- paste(x, "distance", sep="_") # Add "distance" to better identify
+#x
+# New column
+final_data$new_column <- NA
+names(final_data)[names(final_data) == 'new_column'] <- x
+# Add distance to the closest building as column (see OSM)
+final_data[,ncol(final_data)] <- final_data_LongLat$distancia_km_hospital
+# Preview
+head(final_data)
+```
+
+## Metro Madrid
+
+- Find closest **Subway Station Entrance**.
+
+```{r}
+# Metro Madrid ShapeFile URL
+#url <- 'https://github.com/DavidJKTofan/ba-master/blob/master/Datos_abiertos_Red_de_Metros.zip?raw=true'
+# create a temporary directory
+#td <- tempdir()
+# create the placeholder file
+#tf <- tempfile(tmpdir=td, fileext=".zip")
+# download into the placeholder file
+#download.file(url, tf)
+#destfile = "Datos_abiertos_Red_de_Metros/529ac56e-59b5-4a62-bb63-770c3299ded92020329-1-1vqyvme.t5gm.shp"
+#if (!file.exists(destfile)) {
+#    download.file(url ,tf, method="auto")
+#}
+# unzip the file to the temporary directory
+#unzip(tf, exdir=td, overwrite=TRUE)
+# fpath is the full path to the extracted file
+#fpath = file.path(td)
+#fpath <- paste("Datos_abiertos_Red_de_Metros", "Datos_abiertos_Red_de_Metros", sep="/") # Add Folder Name
+#fpath <- gsub(fpath, pattern="//", replacement="/", fixed=TRUE) # In case there is double slash /
+
+# Load Postal / ZIP codes
+metro_locations <- readOGR(dsn = "Datos_abiertos_Red_de_Metros",
+                       layer = '529ac56e-59b5-4a62-bb63-770c3299ded92020329-1-1vqyvme.t5gm')
+
+# Change column name to COD_POSTAL
+colnames(metro_locations@data)[24] <- "COD_POSTAL"
+
+# CRS
+metro_locations <- spTransform(metro_locations, CRS('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'))
+
+# Convert to DataFrame
+metro_locations_LongLat <- as.data.frame(metro_locations@coords)
+# Rename columns
+colnames(metro_locations_LongLat)[which(names(metro_locations_LongLat) == "coords.x1")] <- "longitude"
+colnames(metro_locations_LongLat)[which(names(metro_locations_LongLat) == "coords.x2")] <- "latitude"
+
+# DataFrame Copy
+metro_locations_df <- as.data.frame(metro_locations)
+# Rename columns
+colnames(metro_locations_df)[which(names(metro_locations_df) == "coords.x1")] <- "longitude"
+colnames(metro_locations_df)[which(names(metro_locations_df) == "coords.x2")] <- "latitude"
+```
+
+```{r}
+## FIND CLOSEST SUBWAY STATION ENTRANCE ##
+# Number of subway station entrances
+nrow(metro_locations_LongLat)
+
+# Add new columns
+final_data_LongLat$distancia_km_metro <- NA
+final_data_LongLat$x <- NA
+final_data_LongLat$y <- NA
+
+### START FOR LOOP ###
+for(i in 1:nrow(final_data_LongLat)) {
+  # Distance
+  Dist <- distm(metro_locations_LongLat,  # ALL buildings from OpenStreetMap
+                final_data_LongLat[i,1:2],  # One Property
+                fun = distCosine) / 1000  # 'Law Of Cosines' Great Circle Distance
+  # Output = kilometers (km)
+  Dist <- apply(Dist,  # variable
+                1,  # 1 = Row / 2 = Columns
+                min)  # function
+  # Find closest places/locations to Property
+  min_number <- which.min(Dist) # which(Dist == min(Dist))
+  min_number_value <- metro_locations_LongLat[min_number,]
+  # Add values to DataFrame (unite)
+  final_data_LongLat[i,4] <- min_number_value[1,1]
+  final_data_LongLat[i,5] <- min_number_value[1,2]
+  final_data_LongLat$distancia_km_metro[i] <- min(Dist)
+}
+### END FOR LOOP ###
+# Preview
+names(final_data_LongLat)
+names(datos)
+datos$distancia_km_hospital <- final_data_LongLat$distancia_km_hospital
+datos$distancia_km_metro <- final_data_LongLat$distancia_km_metro
+```
+
+
+```{r}
+# Filter Properties with Subway Stations less than 100m away
+filter(final_data_LongLat,
+       distancia_km_metro < 0.05)
+```
+
+```{r}
+# PREPARE DATA
+# Property Data
+final_data_First <- as.data.frame(final_data_SP)
+final_data_VISUAL <- final_data_LongLat
+# Merge with Final DataFrame
+final_data_VISUAL <- merge(x = final_data_VISUAL, y = final_data_First, by = c("longitude","latitude"), all.x = TRUE) # Left Outer Join
+# Metro Data
+metro_locations_df_small <- metro_locations_df
+# Filter
+metro_locations_df_small<- metro_locations_df_small %>%
+  dplyr::select(NOMBREVIA, latitude, longitude) # dplyr
+# Change col names
+colnames(metro_locations_df_small)[which(names(metro_locations_df_small) == "latitude")] <- "y"
+colnames(metro_locations_df_small)[which(names(metro_locations_df_small) == "longitude")] <- "x"
+# Merge with Metro
+final_data_VISUAL <- merge(x = final_data_VISUAL, y = metro_locations_df_small, by = c("x","y"), all.x = TRUE)
+```
+
+```{r}
+# Prepare the text for tooltips:
+mytext1 <- paste(
+    "<b>Property</b>","<br/>",
+    "District: ", final_data_VISUAL$district, "<br/>",
+    "Neighborhood: ", final_data_VISUAL$neighborhood, "<br/>",
+    "Postal Code: ", final_data_VISUAL$COD_POSTAL,
+    sep="") %>%
+  lapply(htmltools::HTML)
+mytext2 <- paste(
+    "<b>Metro Station</b>", "<br/>",
+    "Access Name: ", final_data_VISUAL$NOMBREVIA, "<br/>",
+    "Postal Code: ", final_data_VISUAL$COD_POSTAL,
+    sep="") %>%
+  lapply(htmltools::HTML)
+# Visualize
+leaflet(options = leafletOptions(minZoom = 10, maxZoom = 20)) %>% 
+  addTiles() %>% 
+  setMaxBounds(lng1 = -3.903, lat1 = 40.216, lng2 = -3.303, lat2 = 40.816 ) %>%
+  addCircleMarkers(data = final_data_VISUAL,
+                   lat = ~latitude, lng = ~longitude,
+                   radius = 2,
+                   color = "blue",
+                   label = mytext1) %>% 
+  addCircleMarkers(data = final_data_VISUAL,
+                   lat = ~y, lng = ~x,
+                   radius = 2,
+                   color = "red",
+                   label = mytext2)
+```
+
+******
+
+```{r}
+# Distance between Properties in order
+#final_data_LongLat$length <- distm(x=final_data_LongLat, fun = distHaversine)[,1]
+#final_data_LongLat$length
+
+# Drop column length
+#drops <- c('length')
+#final_data_LongLat <- final_data_LongLat[ , !(names(final_data_LongLat) %in% drops)]
+```
+
+```{r}
+# Visualization ???
+# Convert points into Spatial Objects
+#first.spatial.points <- SpatialPoints(final_data_LongLat) 
+#plot(first.spatial.points)
+
+# Assign CRS
+#crs.geo <- CRS('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
+#proj4string(first.spatial.points) <- crs.geo  
+# View if a projection is defined
+#is.projected(first.spatial.points) 
+# FALSE if it has a geographic coordinate system but lacks a projection, 
+# NA if it lacks both. 
+
+# Add variables and convert to Spatial DataFrame
+#first.spdf <- SpatialPointsDataFrame(first.spatial.points, vars)
+#summary(first.spdf)
+```
+
+## Distance Validation
+
+Other functions:
+
+- `distHaversine()`
+
+- `distMeeus()`
+
+- `distRhumb()`
+
+- `distVincentyEllipsoid()`
+
+- `distVincentySphere()`
+
+```{r}
+# CHECK IF TRUE DISTANCE
+# Distance function
+get_geo_distance = function(long1, lat1, long2, lat2, units = "km") {
+  loadNamespace("purrr")
+  loadNamespace("geosphere")
+  longlat1 = purrr::map2(long1, lat1, function(x,y) c(x,y))
+  longlat2 = purrr::map2(long2, lat2, function(x,y) c(x,y))
+  distance_list = purrr::map2(longlat1, longlat2, function(x,y) geosphere::distHaversine(x, y))
+  distance_m = rlist::list.extract(distance_list, position = 1)
+  if (units == "km") {
+    distance = distance_m / 1000.0;
+    #print("shown in km")
+  }
+  else if (units == "miles") {
+    distance = distance_m / 1609.344
+    #print("shown in miles")
+  }
+  else {
+    distance = distance_m
+    # This will return in meter as same way as distHaversine function. 
+  }
+  distance
+}
+
+# EXAMPLE
+get_geo_distance(-3.6984, 40.4228,  # First Location
+                 -122.5631722, 37.8976645,  # Second Location
+                 units = "km")
+
+get_geo_distance(final_data_LongLat[1,1], final_data_LongLat[1,2],  # First Location
+                 final_data_LongLat[1,4], final_data_LongLat[1,5],  # Second Location
+                 units = "km")
+```
+
+```{r}
+# CHECK IF TRUE DISTANCE
+library(aspace)
+# Check ROW number:
+row_number = 1 # FEEL FREE TO CHANGE
+lat1 = as_radians(final_data_LongLat[row_number,2])
+lon1 = as_radians(final_data_LongLat[row_number,1])
+lat2 = as_radians(final_data_LongLat[row_number,5])
+lon2 = as_radians(final_data_LongLat[row_number,4])
+
+# Kilometer
+a = 6378.138;
+b = 6356.753;
+numerator = ( a^2 * cos(lat2) )^2 + ( b^2 * sin(lat2) ) ^2
+denominator = ( a * cos(lat2) )^2 + ( b * sin(lat2) )^2
+radiusofearth = sqrt(numerator/denominator) # Accounts for the ellipticity of the earth
+distance_result <- radiusofearth * acos( sin(lat1) * sin(lat2) + cos(lat1)*cos(lat2)*cos(lon2 - lon1) )
+cat("The row number", row_number, "should have a distance of", distance_result, "km")
+
+## Percentage Difference of Distance between the distm function and manual calc ##
+# Empty list
+datalist <- list()
+### START FOR LOOP ###
+for (i in 1:nrow(final_data_LongLat)) {
+  total_difference <- final_data_LongLat[i,3] - distance_result
+  total_difference_percentage <- total_difference / final_data_LongLat[i,3]
+  total_difference_percentage <- as.numeric(total_difference_percentage)
+  datalist[i] <- total_difference_percentage
+}
+### END FOR LOOP ###
+# Percentage Function
+percent <- function(x, digits = 2, format = "f", ...) {
+  paste0(formatC(100 * x, format = format, digits = digits, ...), "%")
+}
+# Difference/error percentage
+cat("The average percentage difference of distance is:", percent(mean(unlist(datalist)) / 100))
+```
+
+
+```{r}
+datos$norte <- datos$latitude > 40.403030
+
+LAT_IND <- c('40.466388','40.462478','40.457449','40.452853','40.448583','40.444247','40.440336','40.435412','40.430798','40.426347','40.421438','40.415924','40.411145')
+LONG_IND <- c('-3.6912797','-3.6920947','-3.6926637','-3.6931247','-3.6935427','-3.6938537','-3.6938967','-3.6911177','-3.6911717','-3.6923197','-3.6943477','-3.6962787','-3.6949057')
+LAT_IND <- as.numeric(LAT_IND)
+LONG_IND <- as.numeric(LONG_IND)
+
+castellana <- data.frame(LONG_IND, LAT_IND)
+
+datos$latitude <- as.numeric(datos$latitude)
+datos$longitude <- as.numeric(datos$longitude)
+
+for (zz in 1:nrow(as.data.frame(datos))) { 
+xx = 9999999
+for (ww in 1:nrow(castellana)) {
+      yy = distm(c(datos$longitude[zz], datos$latitude[zz]),c(castellana$LONG_IND[ww],castellana$LAT_IND[ww]), fun = distHaversine)
+      if (yy < xx){
+        xx = yy # Al final del bucle tendremos la menor de las distancias
+      }
+    }
+datos$distancia[zz] <- xx
+}
+
+datos$distancia <- datos$distancia < 400 #TRUE los que están a menos de 400 metros de Castellana
+
+table(datos$distancia)
+```
+
+```{r}
+datos$price    <- as.character(datos$price)
+datos$latitude    <- as.character(datos$latitude)
+datos$longitude    <- as.character(datos$longitude)
+```
+
+
+```{r}
+
+# Standardize the continuous variables (NOT necessary?)
+datos <- datos %>%
+  mutate_if(is.numeric, funs(as.numeric(scale(.)))) # standardize each column to improve the performance
+ head(datos)
+```
+
+```{r}
+datos$price    <- as.numeric(datos$price)
+datos$latitude    <- as.numeric(datos$latitude)
+datos$longitude    <- as.numeric(datos$longitude)
+```
+
+
+
+## Modelo GLM1: 
+
+
+
+### Incluye todas las variables sin las espaciales
+
+```{r}
+formula <- price ~  distance + size + rooms + bathrooms + status  + hasLift +  ventas  + desempleomujeres + poblacionextranjeros + floor # all variables
+glm1 <- glm(formula, data = datos, family = 'gaussian')
+summary(glm1)
+```
+
+
+
+```{r}
+## Precisión
+
+datos$glm1predict <- predict(glm1,datos,type="response") 
+datos$e1 <- ((datos$price)-(datos$glm1predict))
+
+sum((((datos$price)-(datos$glm1predict))))
+
+
+```
+```{r}
+RMSE = function(m, o){
+  sqrt(mean((m - o)^2))
+}
+```
+
+
+```{r}
+
+RMSE(datos$glm1predict,datos$price)
+```
+
+
+
+## Modelo GLM2: 
+### Incluye solo las variables significativas. Convertimos floor a dummy para poder usar únicamente uno de sus valores.
+
+```{r}
+library(fastDummies)
+datos <- dummy_cols(datos, select_columns = c("floor"),remove_first_dummy = TRUE)
+datos$floorotro <- datos$floor_otro
+datos$size2<-datos$size**2
+datos$size3<-datos$size**3
+head(datos)
+```
+
+```{r}
+formula <- price ~   size +size2+size3 + bathrooms + status + hasLift +  ventas  + desempleomujeres + poblacionextranjeros+ floor_otro
+glm2 <- glm(formula, data = datos, family = 'gaussian')
+summary(glm2)
+```
+
+## Precisión
+
+
+
+```{r}
+## Precisión
+
+datos$glm2predict <- predict(glm2,datos,type="response") 
+datos$e2 <- ((datos$price)-(datos$glm2predict))
+
+sum((((datos$price)-(datos$glm2predict))))
+
+
+```
+
+
+```{r}
+RMSE(datos$glm2predict,datos$price)
+```
+
+
+
+## Modelo GLM3:
+### Incluyendo distancia al metro y a hospitales
+
+```{r}
+formula <- price ~ distancia_km_metro + distancia_km_hospital +size2+size3+ distance + size + rooms + bathrooms + status + hasLift +  ventas  + poblacionextranjeros + desempleomujeres + floorotro + distancia + norte
+glm3 <- glm(formula, data = datos, family = 'gaussian')
+
+summary(glm3)
+```
+## Precisión
+
+
+```{r}
+## Precisión
+
+datos$glm3predict <- predict(glm3,datos,type="response") 
+datos$e3 <- ((datos$price)-(datos$glm3predict))
+
+sum((((datos$price)-(datos$glm3predict))))
+
+
+```
+
+
+```{r}
+RMSE(datos$glm3predict,datos$price)
+```
+
+
+
+## Modelo SAR:
+
+```{r}
+nb <- knn2nb(knearneigh(cbind(datos$longitude, datos$latitude), k=5))
+listw <- nb2listw(nb, style="W")
+
+SAR <- lagsarlm(price ~ distancia_km_metro +size2+size3+ distancia_km_hospital + distance + size + rooms + bathrooms + status  + hasLift +  ventas  + poblacionextranjeros + desempleomujeres + floorotro + distancia + norte, 
+                data = datos, listw = listw)
+
+summary(SAR)
+```
+
+## Precisión:
+
+```{r}
+datos$sarPredict1 <- predict.sarlm(SAR, listw = listw, pred.type = "TC", all.data = T, zero.policy = F) 
+datos$e4 <- ((datos$price)-(datos$sarPredict1))
+
+sum((((datos$price)-(datos$sarPredict1))))
+```
+
+
+
+```{r}
+RMSE(datos$sarPredict1,datos$price)
+```
+
+
+
+```{r}
+
+datos$VIVO<-1
+datos$LAT_IND<-datos$latitude
+datos$LONG_IND<-datos$longitude
+datos$response<-datos$e4
+(datos$e4)
+
+pintar_Pl_raster(GEO=Geo_CP,pt=datos,punto_raster=2,rr=35)
+
+
+```
+
+
+
+```{r}
+ak<-agreg(GEO =Geo_CP,pt = datos,rr = 35,punto_raster = 2 )
+dep_Espacial(GEO = ak[[1]],xx = ak[[2]],punto_raster = 2,nn = 5)
+
+
+```
+
+
+```{r}
+#Sat Scan: Variable Respuesta
+ak<-agreg(GEO =Geo_CP,pt = datos,rr = 35,punto_raster = 2 )
+#sk<-SatScanp(GEO =ak[[1]]@data,rates = 1,shape = 0,MT = 5,AT =1,reps=99  )
+#print(sk)
+#print_sk(xx = ak[[1]]@data,sk=sk,pv=1)
+```
+
+
+```{r}
+saveRDS(glm3, "modelrev2.rds")
+```
+
+
+
+
+```{r}
+
+library(openxlsx)
+write.csv2(datos,"datosTFM.csv")
+saveRDS(datos, "datosTFM.rds")
+```
+
+
+
+```{r}
+
+library(openxlsx)
+write.csv2(datosfinal1,"datosfinal1TFM.csv")
+saveRDS(datosfinal1, "datosfinal1TFM.rds")
+```
+
+```{r}
+str(datos)
+```
+
+
+
+
+
